@@ -1,0 +1,91 @@
+spring:
+  application:
+    name: bankramen-server
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${MYSQL_URL}
+    username: ${MYSQL_USERNAME}
+    password: ${MYSQL_PASSWORD}
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+
+  jpa:
+    database: mysql
+    hibernate:
+      ddl-auto: update
+      dialect: org.hibernate.dialect.MySQLDialect
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: true
+
+  flyway:
+    baseline-on-migrate: true
+    baseline-version: 0
+
+  main:
+    allow-bean-definition-overriding: true
+
+  jackson:
+    serialization:
+      fail-on-empty-beans: false
+
+  cloud:
+    openfeign:
+      client:
+        config:
+          geminiClient:
+            connectTimeout: 1000
+            readTimeout: 2000
+
+jwt:
+  secretKey: ${JWT_SECRET}
+  header: ${HEADER}
+  prefix: ${PREFIX}
+  accessExp: ${ACCESS_EXP}
+  refreshExp: ${REFRESH_EXP}
+
+kakao:
+  client-id: ${KAKAO_CLIENT_ID}
+  client-secret: ${KAKAO_CLIENT_SECRET}
+  redirect-uri: ${KAKAO_REDIRECT_URL}
+  auth-url: ${KAKAO_AUTH_URL}
+  api-url: ${KAKAO_API_URL}
+
+oauth:
+  state:
+    expiration: ${STATE_EXP}
+    prefix: ${STATE_PREFIX}
+
+gemini:
+  api-key: ${GEMINI_API_KEY}
+  model: ${GEMINI_MODEL}
+  base-url: ${GEMINI_BASE_URL}
+
+fcm:
+  enabled: ${FCM_ENABLED:false}
+  credentials-path: ${FCM_CREDENTIALS_PATH:/config/bankramen.json}
+
+integration:
+  dispatch-interval-ms: ${INTEGRATION_DISPATCH_INTERVAL_MS:30000}
+  connections:
+    - connection-id: hermes-personal
+      consumer-id: yuseob-finance-assistant
+      connector-type: HERMES_WEBHOOK
+      enabled: ${HERMES_WEBHOOK_ENABLED:true}
+      subscribed-events:
+        - transaction.created
+      webhook-url: ${HERMES_WEBHOOK_URL:}
+      secret: ${HERMES_WEBHOOK_SECRET:}
+
+mcp:
+  initial-connection:
+    connection-id: ${MCP_CONNECTION_ID:hermes-local}
+    consumer-id: ${MCP_CONSUMER_ID:hermes-agent}
+    linked-user-id: ${MCP_LINKED_USER_ID:}
+    enabled: ${MCP_ENABLED:true}
+    token: ${MCP_INITIAL_TOKEN:}
