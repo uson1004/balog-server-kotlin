@@ -1,0 +1,19 @@
+package org.example.bankramenserver
+
+import org.springframework.boot.SpringApplication
+import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.cloud.openfeign.EnableFeignClients
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing
+import org.springframework.scheduling.annotation.EnableAsync
+import org.springframework.scheduling.annotation.EnableScheduling
+
+@SpringBootApplication
+@EnableJpaAuditing
+@EnableFeignClients
+@EnableScheduling
+@EnableAsync
+class BankramenServerApplication
+
+fun main(args: Array<String>) {
+    SpringApplication.run(BankramenServerApplication::class.java, *args)
+}
