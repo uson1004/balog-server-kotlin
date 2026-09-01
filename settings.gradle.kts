@@ -1,1 +1,1 @@
-rootProject.name = "bankramen-server"
+rootProject.name = "balog-server"

@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-This is a Gradle-based Spring Boot 3 backend. Application code lives under `src/main/java/org/example/bankramenserver` and is grouped by domain feature such as `auth`, `user`, `category`, `report`, and `transaction`. Follow the layered package style already in use: `domain`, `presentation`, `presentation/dto`, `service`, `facade`, and `domain/repository` where persistence is needed. Keep shared infrastructure in `global`, including `config`, `error`, `jwt`, and Swagger document interfaces in `global/document`. Tests belong under `src/test/java/org/example/bankramenserver`.
+This is a Gradle-based Spring Boot 3 backend. Application code lives under `src/main/java/org/example/balogserver` and is grouped by domain feature such as `auth`, `user`, `category`, `report`, and `transaction`. Follow the layered package style already in use: `domain`, `presentation`, `presentation/dto`, `service`, `facade`, and `domain/repository` where persistence is needed. Keep shared infrastructure in `global`, including `config`, `error`, `jwt`, and Swagger document interfaces in `global/document`. Tests belong under `src/test/java/org/example/balogserver`.
 
 ## Build, Test, and Development Commands
 Use the Gradle wrapper through Bash.

@@ -12,7 +12,7 @@ plugins {
 
 group = "org.example"
 version = "0.0.1-SNAPSHOT"
-description = "bankramen-server"
+description = "balog-server"
 
 java.toolchain.languageVersion.set(JavaLanguageVersion.of(17))
 
@@ -21,7 +21,7 @@ repositories { mavenCentral() }
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-validation")
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0")
     implementation("org.springframework.cloud:spring-cloud-starter-openfeign")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("com.querydsl:querydsl-jpa:5.1.0:jakarta")
@@ -42,7 +42,7 @@ dependencies {
     testImplementation("org.springframework.security:spring-security-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     implementation("com.fasterxml.jackson.core:jackson-databind")
-    implementation("io.modelcontextprotocol.sdk:mcp-json-jackson2:1.1.2")
+    implementation("io.modelcontextprotocol.sdk:mcp-json-jackson2:1.0.2")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 }
