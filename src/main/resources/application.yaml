@@ -80,3 +80,6 @@ mcp:
     linked-user-id: ${MCP_LINKED_USER_ID:}
     enabled: ${MCP_ENABLED:true}
     token: ${MCP_INITIAL_TOKEN:}
+
+app:
+  public-url: ${APP_PUBLIC_URL:}
