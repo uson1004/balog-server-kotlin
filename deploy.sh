@@ -13,6 +13,44 @@ if ! command -v java >/dev/null; then
   sudo dnf install -y java-17-openjdk-headless
 fi
 
+if ! command -v podman >/dev/null; then
+  sudo dnf install -y podman
+fi
+
+set -a
+. "$APP_DIR/.env"
+set +a
+
+if ! podman container exists balog-mysql; then
+  podman run -d --name balog-mysql --restart=always \
+    -e MYSQL_DATABASE=balog \
+    -e MYSQL_ROOT_PASSWORD \
+    -p 127.0.0.1:3307:3306 \
+    -v balog-mysql:/var/lib/mysql \
+    docker.io/library/mysql:8.4
+else
+  podman start balog-mysql >/dev/null 2>&1 || true
+fi
+
+if ! podman container exists balog-redis; then
+  podman run -d --name balog-redis --restart=always \
+    -p 127.0.0.1:6380:6379 \
+    -v balog-redis:/data \
+    docker.io/library/redis:7
+else
+  podman start balog-redis >/dev/null 2>&1 || true
+fi
+
+for _ in {1..30}; do
+  if podman exec -e MYSQL_PWD="$MYSQL_ROOT_PASSWORD" balog-mysql mysqladmin ping -h localhost --silent && podman exec balog-redis redis-cli ping; then
+    break
+  fi
+  sleep 2
+done
+
+podman exec -e MYSQL_PWD="$MYSQL_ROOT_PASSWORD" balog-mysql mysqladmin ping -h localhost --silent
+podman exec balog-redis redis-cli ping >/dev/null
+
 if systemctl is-active --quiet firewalld; then
   sudo firewall-cmd --permanent --add-port=8080/tcp
   sudo firewall-cmd --reload
