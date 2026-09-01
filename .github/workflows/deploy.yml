@@ -7,6 +7,8 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      APP_ENV: ${{ secrets.APP_ENV }}
 
     steps:
       - name: Checkout source
@@ -30,7 +32,7 @@ jobs:
           host: ${{ secrets.OCI_HOST }}
           username: opc
           key: ${{ secrets.OCI_SSH_KEY }}
-          source: "build/libs/*SNAPSHOT.jar"
+          source: "build/libs/*SNAPSHOT.jar,deploy.sh"
           target: "/home/opc/app/"
           strip_components: 0
 
@@ -40,6 +42,10 @@ jobs:
           host: ${{ secrets.OCI_HOST }}
           username: opc
           key: ${{ secrets.OCI_SSH_KEY }}
+          envs: APP_ENV
           script: |
+            set -e
+            printf '%s' "$APP_ENV" > /home/opc/app/.env
+            chmod 600 /home/opc/app/.env
             chmod +x /home/opc/app/deploy.sh
             /home/opc/app/deploy.sh
