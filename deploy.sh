@@ -21,6 +21,8 @@ set -a
 . "$APP_DIR/.env"
 set +a
 
+sudo loginctl enable-linger "$USER"
+
 if ! podman container exists balog-mysql; then
   podman run -d --name balog-mysql --restart=always \
     -e MYSQL_DATABASE=balog \
@@ -61,7 +63,19 @@ if [[ -f "$APP_DIR/application.pid" ]] && kill -0 "$(cat "$APP_DIR/application.p
 fi
 
 cd "$APP_DIR"
-nohup java -jar "$JAR_PATH" > application.log 2>&1 &
+MCP_ENABLED=false MCP_INITIAL_TOKEN= nohup java -jar "$JAR_PATH" > application.log 2>&1 &
 echo $! > application.pid
-sleep 10
-kill -0 "$(cat application.pid)"
+
+for _ in {1..45}; do
+  if curl -fsS http://127.0.0.1:8080/v3/api-docs >/dev/null; then
+    exit 0
+  fi
+  if ! kill -0 "$(cat application.pid)" 2>/dev/null; then
+    tail -100 application.log
+    exit 1
+  fi
+  sleep 2
+done
+
+tail -100 application.log
+exit 1
