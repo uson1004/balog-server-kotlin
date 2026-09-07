@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.modelcontextprotocol.json.McpJsonMapper
+import io.modelcontextprotocol.common.McpTransportContext
 import io.modelcontextprotocol.json.jackson2.JacksonMcpJsonMapper
 import io.modelcontextprotocol.server.McpServer
 import io.modelcontextprotocol.server.McpServerFeatures
@@ -12,6 +13,10 @@ import io.modelcontextprotocol.server.transport.HttpServletStreamableServerTrans
 import io.modelcontextprotocol.spec.McpSchema
 import jakarta.servlet.Servlet
 import org.example.balogserver.infrastructure.mcp.auth.McpInitialConnectionProperties
+import org.example.balogserver.infrastructure.mcp.auth.McpAgentPrincipal
+import org.example.balogserver.domain.auth.exception.InvalidTokenException
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.web.servlet.ServletRegistrationBean
 import org.springframework.context.annotation.Bean
@@ -34,6 +39,11 @@ class McpServerConfiguration(
         .jsonMapper(mcpJsonMapper())
         .mcpEndpoint("/mcp")
         .disallowDelete(true)
+        .contextExtractor {
+            val principal = SecurityContextHolder.getContext().authentication?.principal as? McpAgentPrincipal
+            if (principal == null) McpTransportContext.EMPTY
+            else McpTransportContext.create(mapOf(PRINCIPAL_KEY to principal))
+        }
         .build()
 
     @Bean
@@ -80,7 +90,19 @@ class McpServerConfiguration(
         handler: (Map<String, Any>) -> Map<String, Any>,
     ): McpServerFeatures.SyncToolSpecification {
         val tool = McpSchema.Tool.builder().name(name).description(description).inputSchema(inputSchema).build()
-        return McpServerFeatures.SyncToolSpecification(tool) { _, request -> response(handler(request.arguments())) }
+        return McpServerFeatures.SyncToolSpecification(tool) { exchange, request ->
+            val principal = exchange.transportContext().get(PRINCIPAL_KEY) as? McpAgentPrincipal
+                ?: throw InvalidTokenException.EXCEPTION
+            val previousContext = SecurityContextHolder.getContext()
+            val requestContext = SecurityContextHolder.createEmptyContext()
+            requestContext.authentication = UsernamePasswordAuthenticationToken(principal, null, emptyList())
+            try {
+                SecurityContextHolder.setContext(requestContext)
+                response(handler(request.arguments()))
+            } finally {
+                SecurityContextHolder.setContext(previousContext)
+            }
+        }
     }
 
     private fun yearMonthSchema(): McpSchema.JsonSchema = schema(
@@ -108,5 +130,9 @@ class McpServerConfiguration(
             .build()
     } catch (_: JsonProcessingException) {
         McpSchema.CallToolResult.builder().addTextContent("Unable to serialize MCP tool result").isError(true).build()
+    }
+
+    private companion object {
+        const val PRINCIPAL_KEY = "balog.mcp.principal"
     }
 }
