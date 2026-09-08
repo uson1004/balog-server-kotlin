@@ -18,7 +18,7 @@ import java.io.IOException
 class McpBearerAuthenticationFilter(
     private val authenticationService: McpAgentConnectionAuthenticationService,
 ) : OncePerRequestFilter() {
-    override fun shouldNotFilter(request: HttpServletRequest): Boolean = request.requestURI != "/mcp"
+    override fun shouldNotFilter(request: HttpServletRequest): Boolean = request.requestURI.removePrefix(request.contextPath) != "/mcp"
 
     @Throws(ServletException::class, IOException::class)
     override fun doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, filterChain: FilterChain) {
