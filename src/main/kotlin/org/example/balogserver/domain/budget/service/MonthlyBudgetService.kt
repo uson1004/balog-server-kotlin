@@ -2,7 +2,8 @@ package org.example.balogserver.domain.budget.service
 
 import org.example.balogserver.domain.budget.domain.repository.MonthlyBudgetRepository
 import org.example.balogserver.domain.budget.presentation.dto.MonthlyBudgetResponse
-import org.example.balogserver.domain.report.domain.repository.MonthlyReportRepository
+import org.example.balogserver.domain.transaction.domain.repository.TransactionRepository
+import org.example.balogserver.domain.transaction.domain.Transaction
 import org.example.balogserver.domain.user.facade.UserFacade
 import org.example.balogserver.global.error.exception.ErrorCode
 import org.example.balogserver.global.error.exception.GlobalException
@@ -17,7 +18,7 @@ import java.util.UUID
 class MonthlyBudgetService(
     private val userFacade: UserFacade,
     private val budgets: MonthlyBudgetRepository,
-    private val reports: MonthlyReportRepository,
+    private val transactions: TransactionRepository,
     private val clock: Clock,
 ) {
     @Transactional(readOnly = true)
@@ -36,12 +37,12 @@ class MonthlyBudgetService(
     }
 
     private fun summary(userId: UUID, month: YearMonth): MonthlyBudgetResponse {
-        val previous = month.minusMonths(1)
-        val expense = reports.findAmountSummary(
-            userId, month.atDay(1), month.atEndOfMonth(), previous.atDay(1), previous.atEndOfMonth(),
-        ).currentExpense ?: 0L
+        val expenses = transactions.findTransactionHistories(
+            userId, Transaction.TransactionType.EXPENSE, month.atDay(1), month.atEndOfMonth(),
+        ).groupBy { requireNotNull(it.transactionDate) }
+            .mapValues { (_, rows) -> rows.sumOf { it.amount ?: 0L } }
         return MonthlyBudgetResponse.of(
-            month, budgets.findAmount(userId, month.year, month.monthValue), expense, LocalDate.now(clock),
+            month, budgets.findAmount(userId, month.year, month.monthValue), expenses.values.sum(), LocalDate.now(clock), expenses,
         )
     }
 

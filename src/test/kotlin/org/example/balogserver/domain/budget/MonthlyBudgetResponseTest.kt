@@ -9,6 +9,24 @@ import java.time.LocalDate
 import java.time.YearMonth
 
 class MonthlyBudgetResponseTest {
+    @Test
+    fun calendarUsesFixedTargetAndOnlyJudgesCompletedDays() {
+        val month = YearMonth.of(2028, 2)
+        val result = MonthlyBudgetResponse.of(month, 2900, 201, month.atDay(4), mapOf(
+            month.atDay(1) to 100L, month.atDay(2) to 101L,
+        ))
+        assertThat(result.dailyTargetAmount).isEqualTo(100)
+        assertThat(result.days).hasSize(29)
+        assertThat(result.days.take(5).map { it.status.name })
+            .containsExactly("SUCCESS", "FAIL", "SUCCESS", "PENDING", "PENDING")
+        assertThat(result.days.take(3).map { it.expenseAmount }).containsExactly(100L, 101L, 0L)
+        assertThat(result.days.last().date).isEqualTo(month.atEndOfMonth())
+        val unset = MonthlyBudgetResponse.of(month, null, 201, month.atDay(4))
+        assertThat(unset.days.all { it.targetAmount == null && it.status.name == "UNSET" }).isTrue()
+        val revised = MonthlyBudgetResponse.of(month, 5800, 201, month.atDay(4), mapOf(month.atDay(2) to 101L))
+        assertThat(revised.days[1].status.name).isEqualTo("SUCCESS")
+    }
+
     @ParameterizedTest
     @CsvSource(
         "2026-09, 2026-09-01, 30, 26666",

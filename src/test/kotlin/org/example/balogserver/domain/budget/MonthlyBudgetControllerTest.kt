@@ -5,8 +5,9 @@ import org.assertj.core.api.Assertions.assertThat
 import org.example.balogserver.domain.budget.domain.repository.MonthlyBudgetRepository
 import org.example.balogserver.domain.budget.presentation.MonthlyBudgetController
 import org.example.balogserver.domain.budget.service.MonthlyBudgetService
-import org.example.balogserver.domain.report.domain.repository.AmountSummaryRow
-import org.example.balogserver.domain.report.domain.repository.MonthlyReportRepository
+import org.example.balogserver.domain.transaction.domain.repository.TransactionHistoryRow
+import org.example.balogserver.domain.transaction.domain.Transaction
+import org.example.balogserver.domain.transaction.domain.repository.TransactionRepository
 import org.example.balogserver.domain.user.facade.UserFacade
 import org.example.balogserver.global.error.GlobalExceptionHandler
 import org.junit.jupiter.api.BeforeEach
@@ -31,7 +32,7 @@ import java.util.UUID
 class MonthlyBudgetControllerTest {
     private val user = mock(UserFacade::class.java)
     private val budgets = mock(MonthlyBudgetRepository::class.java)
-    private val reports = mock(MonthlyReportRepository::class.java)
+    private val reports = mock(TransactionRepository::class.java)
     private val userId = UUID.randomUUID()
     private lateinit var mvc: MockMvc
 
@@ -41,14 +42,14 @@ class MonthlyBudgetControllerTest {
         val service = MonthlyBudgetService(user, budgets, reports, clock)
         mvc = MockMvcBuilders.standaloneSetup(MonthlyBudgetController(service))
             .setControllerAdvice(GlobalExceptionHandler())
-            .setMessageConverters(MappingJackson2HttpMessageConverter(jacksonObjectMapper()))
+            .setMessageConverters(MappingJackson2HttpMessageConverter(jacksonObjectMapper().findAndRegisterModules()))
             .build()
     }
 
     private fun spending() {
         `when`(user.currentUserId).thenReturn(userId)
-        `when`(reports.findAmountSummary(userId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30), LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31)))
-            .thenReturn(AmountSummaryRow(200000, 0, 0, 0, 0, 0))
+        `when`(reports.findTransactionHistories(userId, Transaction.TransactionType.EXPENSE, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30)))
+            .thenReturn(listOf(TransactionHistoryRow.builder().transactionDate(LocalDate.of(2026, 9, 1)).amount(200000).build()))
     }
 
     @Test
@@ -63,6 +64,13 @@ class MonthlyBudgetControllerTest {
             .andExpect(jsonPath("$.remainingAmount").value(800000))
             .andExpect(jsonPath("$.remainingDays").value(23))
             .andExpect(jsonPath("$.dailyAvailableAmount").value(34782))
+            .andExpect(jsonPath("$.dailyTargetAmount").value(33333))
+            .andExpect(jsonPath("$.days.length()").value(30))
+            .andExpect(jsonPath("$.days[0].date").value("2026-09-01"))
+            .andExpect(jsonPath("$.days[0].status").value("FAIL"))
+            .andExpect(jsonPath("$.days[1].status").value("SUCCESS"))
+            .andExpect(jsonPath("$.days[7].status").value("PENDING"))
+        verify(reports).findTransactionHistories(userId, Transaction.TransactionType.EXPENSE, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30))
         verify(budgets).findAmount(userId, 2026, 9)
     }
 
