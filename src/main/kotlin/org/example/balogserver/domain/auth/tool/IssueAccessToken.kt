@@ -27,6 +27,9 @@ object IssueAccessToken {
         val secret = requireNotNull(environment["JWT_SECRET"]) { "JWT_SECRET is required." }
         val userId = UUID.fromString(requireNotNull(environment["BALOG_USER_ID"]) { "BALOG_USER_ID is required." })
         val output = Path.of(requireNotNull(environment["BALOG_TOKEN_FILE"]) { "BALOG_TOKEN_FILE is required." })
+        require(Files.getFileStore(output.toAbsolutePath().parent).supportsFileAttributeView("posix")) {
+            "Token output requires a POSIX file system with owner-only permissions."
+        }
         val seconds = environment["ACCESS_EXP"]?.toLong() ?: 900L
         require(seconds in 1..86400) { "ACCESS_EXP must be between 1 and 86400 seconds." }
         val token = JwtService(secret, seconds, seconds).generateAccessToken(userId)

@@ -1,5 +1,7 @@
 package org.example.balogserver.domain.auth.service
 
+import java.util.Base64
+
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
 import org.assertj.core.api.Assertions.assertThat
@@ -10,7 +12,7 @@ import java.util.Date
 import java.util.UUID
 
 class JwtServiceTest {
-    private val secret = "unit-test-only-signing-key-0123456789abcdef0123456789abcdef"
+    private val secret = Base64.getEncoder().encodeToString(Jwts.SIG.HS256.key().build().encoded)
     private val service = JwtService(secret, 300, 600)
 
     @Test

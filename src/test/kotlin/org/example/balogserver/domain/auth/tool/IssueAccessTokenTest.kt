@@ -1,19 +1,26 @@
 package org.example.balogserver.domain.auth.tool
 
+import io.jsonwebtoken.Jwts
+
+import java.util.Base64
+
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.example.balogserver.domain.auth.service.JwtService
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.api.condition.EnabledOnOs
+import org.junit.jupiter.api.condition.OS
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermissions
 import java.util.UUID
 
+@EnabledOnOs(OS.LINUX, OS.MAC)
 class IssueAccessTokenTest {
     @TempDir lateinit var directory: Path
-    private val secret = "issuer-test-only-signing-key-0123456789abcdef0123456789abcdef"
+    private val secret = Base64.getEncoder().encodeToString(Jwts.SIG.HS256.key().build().encoded)
     private val userId = UUID.randomUUID()
 
     @Test

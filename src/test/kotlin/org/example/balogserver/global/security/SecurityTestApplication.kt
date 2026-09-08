@@ -1,5 +1,9 @@
 package org.example.balogserver.global.security
 
+import io.jsonwebtoken.Jwts
+
+import java.util.Base64
+
 import org.example.balogserver.domain.auth.service.JwtService
 import org.example.balogserver.domain.auth.service.LocalAuthService
 import org.example.balogserver.domain.auth.service.RefreshTokenService
@@ -71,7 +75,7 @@ class SecurityTestApplication {
     @Bean fun reportCategories(): GetMonthlyCategoryExpenseListService = mock(GetMonthlyCategoryExpenseListService::class.java)
 
     companion object {
-        const val TEST_SECRET = "jwt-http-test-only-signing-key-not-for-production-0123456789abcdef"
+        val TEST_SECRET = Base64.getEncoder().encodeToString(Jwts.SIG.HS256.key().build().encoded)
 
         @JvmStatic
         fun main(args: Array<String>) {

@@ -1,5 +1,7 @@
 package org.example.balogserver.global.security
 
+import java.util.Base64
+
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
 import org.assertj.core.api.Assertions.assertThat
@@ -130,7 +132,7 @@ class JwtSecurityIntegrationTest {
 
     @Test
     fun anotherSigningKeyIsRejected() {
-        val other = JwtService("different-test-only-signing-key-0123456789abcdef0123456789abcdef", 300, 600)
+        val other = JwtService(Base64.getEncoder().encodeToString(Jwts.SIG.HS256.key().build().encoded), 300, 600)
         assertThat(request("/transactions/recent", "Bearer ${other.generateAccessToken(alice)}").statusCode()).isEqualTo(401)
     }
 
