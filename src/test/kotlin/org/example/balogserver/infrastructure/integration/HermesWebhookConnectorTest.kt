@@ -3,6 +3,7 @@ package org.example.balogserver.infrastructure.integration
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.sun.net.httpserver.HttpServer
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.example.balogserver.domain.category.domain.Category
 import org.example.balogserver.domain.transaction.event.PaymentTransactionRecordedEvent
 import org.example.balogserver.infrastructure.integration.domain.IntegrationConnectionProperties
@@ -13,7 +14,9 @@ import org.mockito.ArgumentCaptor
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import java.net.InetSocketAddress
+import java.net.http.HttpTimeoutException
 import java.nio.charset.StandardCharsets
+import java.time.Duration
 import java.time.LocalDate
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference
@@ -74,5 +77,24 @@ class HermesWebhookConnectorTest {
     fun signsTheExactUtf8PayloadBytesWithHmacSha256() {
         assertThat(HermesWebhookConnector.signature("payload".toByteArray(), "test-secret"))
             .isEqualTo("sha256=2fcd0dbc44d5dd073ead5ea4b4d81cfd543e5de42e9c353f80452715e2b576a3")
+    }
+
+    @Test
+    fun timesOutBeforeAnOutboxLeaseCanExpire() {
+        val server = HttpServer.create(InetSocketAddress(0), 0)
+        server.createContext("/hook") { Thread.sleep(200) }
+        server.start()
+        try {
+            val connection = IntegrationConnectionProperties.Connection(
+                "hermes-personal", "consumer", "HERMES_WEBHOOK", true, listOf("transaction.created"),
+                "http://127.0.0.1:${server.address.port}/hook", "test-secret",
+            )
+            val outbox = IntegrationOutbox.pending("transaction-1", "event-1", "hermes-personal", "HERMES_WEBHOOK", "transaction.created", "{}")
+
+            assertThatThrownBy { HermesWebhookConnector(requestTimeout = Duration.ofMillis(50)).dispatch(outbox, connection) }
+                .isInstanceOf(HttpTimeoutException::class.java)
+        } finally {
+            server.stop(0)
+        }
     }
 }

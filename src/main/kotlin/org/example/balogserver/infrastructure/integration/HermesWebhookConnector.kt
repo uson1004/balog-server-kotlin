@@ -9,6 +9,7 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
+import java.time.Duration
 import java.util.HexFormat
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
@@ -16,6 +17,7 @@ import javax.crypto.spec.SecretKeySpec
 @Component
 class HermesWebhookConnector(
     private val httpClient: HttpClient = HttpClient.newHttpClient(),
+    private val requestTimeout: Duration = REQUEST_TIMEOUT,
 ) : IntegrationConnector {
     override fun connectorType(): String = CONNECTOR_TYPE
 
@@ -24,6 +26,7 @@ class HermesWebhookConnector(
         val body = outbox.payload.toByteArray(StandardCharsets.UTF_8)
         val response = httpClient.send(
             HttpRequest.newBuilder(URI.create(connection.webhookUrl))
+                .timeout(requestTimeout)
                 .header("Content-Type", "application/json")
                 .header("X-Hub-Signature-256", signature(body, connection.secret))
                 .header("X-Request-ID", outbox.eventId)
@@ -36,6 +39,7 @@ class HermesWebhookConnector(
 
     companion object {
         private const val CONNECTOR_TYPE = "HERMES_WEBHOOK"
+        private val REQUEST_TIMEOUT = Duration.ofSeconds(30)
 
         @JvmStatic
         fun signature(body: ByteArray, secret: String): String = try {

@@ -57,6 +57,12 @@ class IntegrationOutbox protected constructor() : BaseEntity() {
     @field:Column(name = "delivered_at")
     final var deliveredAt: LocalDateTime? = null
         private set
+    @field:Column(name = "lease_id", columnDefinition = "BINARY(16)")
+    final var leaseId: UUID? = null
+        private set
+    @field:Column(name = "lease_expires_at")
+    final var leaseExpiresAt: LocalDateTime? = null
+        private set
 
     private constructor(transactionId: String, eventId: String, connectionId: String, connectorType: String, eventType: String, payload: String) : this() {
         this.transactionId = transactionId
@@ -69,13 +75,29 @@ class IntegrationOutbox protected constructor() : BaseEntity() {
         attemptCount = 0
     }
 
+    fun isClaimableAt(now: LocalDateTime): Boolean = when (status) {
+        Status.PENDING -> true
+        Status.RETRYING -> nextAttemptAt?.isAfter(now) != true
+        Status.PROCESSING -> leaseExpiresAt?.isAfter(now) != true
+        Status.DELIVERED -> false
+    }
+
     fun isPending() = status == Status.PENDING || status == Status.RETRYING
+
+    fun claim(nextLeaseId: UUID, expiresAt: LocalDateTime): UUID {
+        status = Status.PROCESSING
+        leaseId = nextLeaseId
+        leaseExpiresAt = expiresAt
+        return nextLeaseId
+    }
 
     fun markDelivered() {
         status = Status.DELIVERED
         deliveredAt = LocalDateTime.now()
         nextAttemptAt = null
         lastError = null
+        leaseId = null
+        leaseExpiresAt = null
     }
 
     fun markForRetry(exception: Exception) {
@@ -83,11 +105,13 @@ class IntegrationOutbox protected constructor() : BaseEntity() {
         status = Status.RETRYING
         nextAttemptAt = LocalDateTime.now().plusMinutes(minOf(1L shl minOf(attemptCount, 6), 60))
         lastError = "${exception.javaClass.simpleName}: ${exception.message}"
+        leaseId = null
+        leaseExpiresAt = null
     }
 
     companion object {
         @JvmStatic fun pending(transactionId: String, eventId: String, connectionId: String, connectorType: String, eventType: String, payload: String) = IntegrationOutbox(transactionId, eventId, connectionId, connectorType, eventType, payload)
     }
 
-    enum class Status { PENDING, RETRYING, DELIVERED }
+    enum class Status { PENDING, RETRYING, PROCESSING, DELIVERED }
 }
