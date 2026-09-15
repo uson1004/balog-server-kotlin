@@ -60,3 +60,12 @@ allOpen {
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17); freeCompilerArgs.add("-Xjsr305=strict") } }
 
 tasks.named<Test>("test") { useJUnitPlatform() }
+
+springBoot { mainClass.set("org.example.balogserver.BalogServerApplicationKt") }
+
+tasks.register<JavaExec>("issueAccessToken") {
+    group = "application"
+    description = "Issue a private access-token file offline; see docs/jwt-auth.md."
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass.set("org.example.balogserver.domain.auth.tool.IssueAccessToken")
+}
