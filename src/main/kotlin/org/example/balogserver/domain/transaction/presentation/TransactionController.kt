@@ -18,6 +18,7 @@ import org.example.balogserver.domain.transaction.service.UpdateTransactionCateg
 import org.example.balogserver.global.document.TransactionApiDocument
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
@@ -49,8 +50,10 @@ class TransactionController(
     override fun createTransaction(@Valid @RequestBody request: CreateTransactionRequest) = createTransactionService.execute(request)
 
     @PostMapping("/payment-notifications")
-    @ResponseStatus(HttpStatus.CREATED)
-    override fun createPaymentNotificationTransaction(@Valid @RequestBody request: CreatePaymentNotificationTransactionRequest) = createPaymentNotificationTransactionService.execute(request)
+    override fun createPaymentNotificationTransaction(@Valid @RequestBody request: CreatePaymentNotificationTransactionRequest): ResponseEntity<org.example.balogserver.domain.transaction.presentation.dto.PaymentNotificationTransactionResponse> {
+        val response = createPaymentNotificationTransactionService.execute(request)
+        return ResponseEntity.status(if (response.created) HttpStatus.CREATED else HttpStatus.OK).body(response)
+    }
 
     @DeleteMapping("/{transactionId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

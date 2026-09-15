@@ -4,6 +4,7 @@ import org.example.balogserver.domain.category.domain.Category
 import org.example.balogserver.domain.transaction.domain.Transaction
 import org.example.balogserver.domain.transaction.presentation.dto.MonthlyExpenseTransactionListResponse
 import org.example.balogserver.domain.transaction.presentation.dto.MonthlyIncomeTransactionListResponse
+import org.example.balogserver.domain.transaction.presentation.dto.PaymentNotificationTransactionResponse
 import org.example.balogserver.domain.transaction.presentation.dto.RecentTransactionListResponse
 import org.example.balogserver.domain.transaction.presentation.dto.TransactionHistoryResponse
 import org.example.balogserver.domain.transaction.service.CreatePaymentNotificationTransactionService
@@ -71,9 +72,30 @@ class TransactionControllerTest {
 
     @Test
     fun createPaymentNotificationTransactionReturnsCreated() {
+        val request = paymentNotificationRequest()
+        Mockito.`when`(createPaymentNotificationTransactionService.execute(request)).thenReturn(PaymentNotificationTransactionResponse(TRANSACTION_ID, true))
+        mockMvc.perform(post("/transactions/payment-notifications").contentType(MediaType.APPLICATION_JSON).content(paymentNotificationJson()))
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.created").value(true))
+        Mockito.verify(createPaymentNotificationTransactionService).execute(request)
+    }
+
+    @Test
+    fun createPaymentNotificationTransactionAcceptsLegacyRequest() {
+        val request = org.example.balogserver.domain.transaction.presentation.dto.CreatePaymentNotificationTransactionRequest("스타벅스 강남점", 4500)
+        Mockito.`when`(createPaymentNotificationTransactionService.execute(request)).thenReturn(PaymentNotificationTransactionResponse(TRANSACTION_ID, true))
         mockMvc.perform(post("/transactions/payment-notifications").contentType(MediaType.APPLICATION_JSON).content("""{"title":"스타벅스 강남점","amount":4500}"""))
             .andExpect(status().isCreated)
-        Mockito.verify(createPaymentNotificationTransactionService).execute(org.example.balogserver.domain.transaction.presentation.dto.CreatePaymentNotificationTransactionRequest("스타벅스 강남점", 4500))
+        Mockito.verify(createPaymentNotificationTransactionService).execute(request)
+    }
+
+    @Test
+    fun createPaymentNotificationTransactionReturnsOkForRetry() {
+        val request = paymentNotificationRequest()
+        Mockito.`when`(createPaymentNotificationTransactionService.execute(request)).thenReturn(PaymentNotificationTransactionResponse(TRANSACTION_ID, false))
+        mockMvc.perform(post("/transactions/payment-notifications").contentType(MediaType.APPLICATION_JSON).content(paymentNotificationJson()))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.created").value(false))
     }
 
     @Test
@@ -143,6 +165,8 @@ class TransactionControllerTest {
 
     private fun incomeResponse(title: String, amount: Long, category: Category) = TransactionHistoryResponse(TRANSACTION_ID, title, LocalDate.of(2026, 8, 25), LocalTime.of(9, 30), amount, Transaction.TransactionType.INCOME, category, category.displayName)
     private fun expenseResponse(title: String, amount: Long, category: Category) = TransactionHistoryResponse(TRANSACTION_ID, title, LocalDate.of(2026, 8, 12), LocalTime.of(14, 30), amount, Transaction.TransactionType.EXPENSE, category, category.displayName)
+    private fun paymentNotificationRequest() = org.example.balogserver.domain.transaction.presentation.dto.CreatePaymentNotificationTransactionRequest("스타벅스 강남점", 4500, "android:com.card:42:1700000000000", "android-notification-parser/2.1.0", "com.card:42:1700000000000", java.time.OffsetDateTime.parse("2026-08-12T05:30:00Z"), java.time.OffsetDateTime.parse("2026-08-12T05:29:00Z"))
+    private fun paymentNotificationJson() = """{"idempotencyKey":"android:com.card:42:1700000000000","title":"스타벅스 강남점","amount":4500,"parserVersion":"android-notification-parser/2.1.0","sourceNotificationId":"com.card:42:1700000000000","collectedAt":"2026-08-12T14:30:00+09:00","occurredAt":"2026-08-12T14:29:00+09:00"}"""
 
     private companion object {
         val TRANSACTION_ID: UUID = UUID.fromString("33333333-3333-3333-3333-333333333333")
