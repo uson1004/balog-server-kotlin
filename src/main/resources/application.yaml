@@ -57,6 +57,9 @@ gemini:
   model: ${GEMINI_MODEL:gemini-2.5-flash}
   base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}
 
+payment-notification:
+  classification-interval-ms: ${PAYMENT_NOTIFICATION_CLASSIFICATION_INTERVAL_MS:300000}
+
 fcm:
   enabled: ${FCM_ENABLED:false}
   credentials-path: ${FCM_CREDENTIALS_PATH:/config/balog.json}
