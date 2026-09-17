@@ -4,6 +4,7 @@ import org.example.balogserver.domain.push.domain.PushNotification
 import org.example.balogserver.domain.push.presentation.dto.PushNotificationListResponse
 import org.example.balogserver.domain.push.presentation.dto.PushNotificationResponse
 import org.example.balogserver.domain.push.service.GetPushNotificationListService
+import org.example.balogserver.domain.push.service.MarkPushNotificationAsReadService
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -13,6 +14,7 @@ import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
@@ -22,8 +24,9 @@ import java.util.UUID
 @ExtendWith(MockitoExtension::class)
 class PushNotificationControllerTest {
     @Mock lateinit var getPushNotificationListService: GetPushNotificationListService
+    @Mock lateinit var markPushNotificationAsReadService: MarkPushNotificationAsReadService
     private lateinit var mockMvc: MockMvc
-    @BeforeEach fun setUp() { mockMvc = MockMvcBuilders.standaloneSetup(PushNotificationController(getPushNotificationListService)).build() }
+    @BeforeEach fun setUp() { mockMvc = MockMvcBuilders.standaloneSetup(PushNotificationController(getPushNotificationListService, markPushNotificationAsReadService)).build() }
 
     @Test
     fun getPushNotificationsReturnsNotifications() {
@@ -38,5 +41,15 @@ class PushNotificationControllerTest {
         `when`(getPushNotificationListService.execute(20)).thenReturn(PushNotificationListResponse(0, emptyList()))
         mockMvc.perform(get("/push-notifications")).andExpect(status().isOk).andExpect(jsonPath("$.notifications").isArray)
         verify(getPushNotificationListService).execute(20)
+    }
+
+    @Test
+    fun markPushNotificationAsReadReturnsNoContent() {
+        val id = UUID.fromString("22222222-2222-2222-2222-222222222222")
+
+        mockMvc.perform(patch("/push-notifications/{notificationId}/read", id))
+            .andExpect(status().isNoContent)
+
+        verify(markPushNotificationAsReadService).execute(id)
     }
 }
