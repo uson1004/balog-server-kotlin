@@ -11,6 +11,7 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionDefinition
+import org.springframework.data.domain.PageRequest
 import org.springframework.transaction.support.SimpleTransactionStatus
 import org.springframework.test.util.ReflectionTestUtils
 import java.time.LocalDateTime
@@ -32,8 +33,8 @@ class IntegrationOutboxDispatcherTest {
             "transaction-1", "event-1", "hermes-personal", "HERMES_WEBHOOK", "transaction.created", "{\"event_type\":\"transaction.created\"}",
         )
         ReflectionTestUtils.setField(outbox, "id", UUID.randomUUID())
-        `when`(outboxRepository.findFirstClaimableAt(anyTime(), pendingStatus(), retryingStatus(), processingStatus()))
-            .thenReturn(outbox, null)
+        `when`(outboxRepository.findFirstClaimableAt(anyTime(), pendingStatus(), retryingStatus(), processingStatus(), firstPage()))
+            .thenReturn(listOf(outbox), emptyList())
         `when`(outboxRepository.findByIdAndLeaseIdAndStatus(anyUuid(), anyUuid(), processingStatus()))
             .thenReturn(Optional.of(outbox))
         `when`(hermesConnector.connectorType()).thenReturn("HERMES_WEBHOOK")
@@ -51,8 +52,8 @@ class IntegrationOutboxDispatcherTest {
             "transaction-1", "event-1", "hermes-personal", "HERMES_WEBHOOK", "transaction.created", "{}",
         )
         ReflectionTestUtils.setField(outbox, "id", UUID.randomUUID())
-        `when`(outboxRepository.findFirstClaimableAt(anyTime(), pendingStatus(), retryingStatus(), processingStatus()))
-            .thenReturn(outbox, null)
+        `when`(outboxRepository.findFirstClaimableAt(anyTime(), pendingStatus(), retryingStatus(), processingStatus(), firstPage()))
+            .thenReturn(listOf(outbox), emptyList())
         `when`(outboxRepository.findByIdAndLeaseIdAndStatus(anyUuid(), anyUuid(), processingStatus()))
             .thenReturn(Optional.of(outbox))
         `when`(hermesConnector.connectorType()).thenReturn("HERMES_WEBHOOK")
@@ -78,6 +79,23 @@ class IntegrationOutboxDispatcherTest {
         assertThat(secondLease).isNotEqualTo(firstLease)
     }
 
+    @Test
+    fun dispatchesOnlyTheFirstClaimedOutbox() {
+        val properties = connections()
+        val first = IntegrationOutbox.pending("transaction-1", "event-1", "hermes-personal", "HERMES_WEBHOOK", "transaction.created", "{}")
+        val second = IntegrationOutbox.pending("transaction-2", "event-2", "hermes-personal", "HERMES_WEBHOOK", "transaction.created", "{}")
+        ReflectionTestUtils.setField(first, "id", UUID.randomUUID())
+        `when`(outboxRepository.findFirstClaimableAt(anyTime(), pendingStatus(), retryingStatus(), processingStatus(), firstPage()))
+            .thenReturn(listOf(first, second), emptyList())
+        `when`(outboxRepository.findByIdAndLeaseIdAndStatus(anyUuid(), anyUuid(), processingStatus())).thenReturn(Optional.of(first))
+        `when`(hermesConnector.connectorType()).thenReturn("HERMES_WEBHOOK")
+
+        IntegrationOutboxDispatcher(outboxRepository, properties, listOf(hermesConnector), transactionManager).dispatchDue()
+
+        verify(hermesConnector).dispatch(first, properties.connections.first())
+        assertThat(second.status).isEqualTo(IntegrationOutbox.Status.PENDING)
+    }
+
     private fun connections() = IntegrationConnectionProperties().apply {
         connections = listOf(
             IntegrationConnectionProperties.Connection(
@@ -99,4 +117,7 @@ class IntegrationOutboxDispatcherTest {
 
     private fun processingStatus(): IntegrationOutbox.Status =
         org.mockito.ArgumentMatchers.eq(IntegrationOutbox.Status.PROCESSING) ?: IntegrationOutbox.Status.PROCESSING
+
+    private fun firstPage(): PageRequest =
+        org.mockito.ArgumentMatchers.eq(PageRequest.of(0, 1)) ?: PageRequest.of(0, 1)
 }

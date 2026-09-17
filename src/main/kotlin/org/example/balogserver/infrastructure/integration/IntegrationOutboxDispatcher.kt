@@ -4,6 +4,7 @@ import org.example.balogserver.infrastructure.integration.domain.IntegrationConn
 import org.example.balogserver.infrastructure.integration.domain.IntegrationOutbox
 import org.example.balogserver.infrastructure.integration.domain.IntegrationOutboxRepository
 import org.slf4j.LoggerFactory
+import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
@@ -33,7 +34,9 @@ class IntegrationOutboxDispatcher(
             IntegrationOutbox.Status.PENDING,
             IntegrationOutbox.Status.RETRYING,
             IntegrationOutbox.Status.PROCESSING,
+            PageRequest.of(0, 1),
         )
+            .firstOrNull()
             ?.also { it.claim(UUID.randomUUID(), now.plusMinutes(LEASE_MINUTES)) }
     }
 
