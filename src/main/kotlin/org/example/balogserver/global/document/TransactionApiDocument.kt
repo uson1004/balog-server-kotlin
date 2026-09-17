@@ -28,10 +28,10 @@ interface TransactionApiDocument {
     @ApiResponses(ApiResponse(responseCode = "201", description = "거래 내역 추가 성공", content = [Content()]), ApiResponse(responseCode = "400", description = "요청 본문 검증 실패", content = [Content()]), ApiResponse(responseCode = "401", description = "인증 실패", content = [Content()]))
     fun createTransaction(@RequestBody(required = true, description = "추가할 거래 내역 정보", content = [Content(schema = Schema(implementation = CreateTransactionRequest::class))]) @Valid request: CreateTransactionRequest)
 
-    @Operation(summary = "결제 알림 거래 내역 추가", description = "클라이언트가 결제 알림에서 파싱한 제목과 금액을 전달하면, Gemini Flash 모델로 카테고리를 추천받아 지출 거래 내역을 추가합니다.", tags = ["Transaction"])
+    @Operation(summary = "결제 알림 거래 내역 추가", description = "기기 로컬 큐의 멱등성 키와 파싱 정보를 저장합니다. 거래는 먼저 미분류로 저장되고 Gemini 분류는 이후 보강됩니다.", tags = ["Transaction"])
     @SecurityRequirement(name = "bearerAuth")
-    @ApiResponses(ApiResponse(responseCode = "201", description = "결제 알림 거래 내역 추가 성공", content = [Content()]), ApiResponse(responseCode = "400", description = "요청 본문 검증 실패", content = [Content()]), ApiResponse(responseCode = "401", description = "인증 실패", content = [Content()]))
-    fun createPaymentNotificationTransaction(@RequestBody(required = true, description = "결제 알림에서 파싱한 거래 정보", content = [Content(schema = Schema(implementation = CreatePaymentNotificationTransactionRequest::class))]) @Valid request: CreatePaymentNotificationTransactionRequest)
+    @ApiResponses(ApiResponse(responseCode = "201", description = "결제 알림 거래 내역 생성", content = [Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = Schema(implementation = PaymentNotificationTransactionResponse::class))]), ApiResponse(responseCode = "200", description = "이미 저장된 동일 알림", content = [Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = Schema(implementation = PaymentNotificationTransactionResponse::class))]), ApiResponse(responseCode = "400", description = "요청 본문 검증 실패", content = [Content()]), ApiResponse(responseCode = "401", description = "인증 실패", content = [Content()]), ApiResponse(responseCode = "409", description = "멱등성 키 재사용", content = [Content()]))
+    fun createPaymentNotificationTransaction(@RequestBody(required = true, description = "원문 알림 없이 전달하는 결제 수집 정보", content = [Content(schema = Schema(implementation = CreatePaymentNotificationTransactionRequest::class))]) @Valid request: CreatePaymentNotificationTransactionRequest): org.springframework.http.ResponseEntity<PaymentNotificationTransactionResponse>
 
     @Operation(summary = "거래 내역 삭제", description = "Authorization 헤더의 액세스 토큰으로 현재 사용자를 식별하고, 본인의 거래 내역을 삭제합니다.", tags = ["Transaction"])
     @SecurityRequirement(name = "bearerAuth")
