@@ -61,6 +61,7 @@ class SecurityConfig(
             if (environment.acceptsProfiles(Profiles.of("local"))) {
                 it.requestMatchers(HttpMethod.GET, "/auth/local/login").permitAll()
             }
+            it.requestMatchers("/budgets/**").authenticated()
             it.anyRequest().authenticated()
         }
         .exceptionHandling {

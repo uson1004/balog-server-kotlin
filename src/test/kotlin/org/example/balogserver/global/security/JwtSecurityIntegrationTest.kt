@@ -56,7 +56,7 @@ class JwtSecurityIntegrationTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["/transactions/recent", "/reports/monthly/summary", "/recurring-payments", "/device-tokens", "/auth/local/login"])
+    @ValueSource(strings = ["/budgets/monthly", "/transactions/recent", "/reports/monthly/summary", "/recurring-payments", "/device-tokens", "/auth/local/login"])
     fun missingTokenIsUnauthorized(path: String) {
         val response = request(path)
         assertThat(response.statusCode()).isEqualTo(401)
