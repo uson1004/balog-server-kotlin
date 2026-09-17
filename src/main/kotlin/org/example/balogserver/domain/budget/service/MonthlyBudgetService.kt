@@ -37,13 +37,17 @@ class MonthlyBudgetService(
     }
 
     private fun summary(userId: UUID, month: YearMonth): MonthlyBudgetResponse {
-        val expenses = transactions.findTransactionHistories(
-            userId, Transaction.TransactionType.EXPENSE, month.atDay(1), month.atEndOfMonth(),
-        ).groupBy { requireNotNull(it.transactionDate) }
-            .mapValues { (_, rows) -> rows.sumOf { it.amount ?: 0L } }
-        return MonthlyBudgetResponse.of(
-            month, budgets.findAmount(userId, month.year, month.monthValue), expenses.values.sum(), LocalDate.now(clock), expenses,
-        )
+        return try {
+            val expenses = transactions.findTransactionHistories(
+                userId, Transaction.TransactionType.EXPENSE, month.atDay(1), month.atEndOfMonth(),
+            ).groupBy { requireNotNull(it.transactionDate) }
+                .mapValues { (_, rows) -> rows.fold(0L) { total, row -> Math.addExact(total, row.amount ?: 0L) } }
+            MonthlyBudgetResponse.of(
+                month, budgets.findAmount(userId, month.year, month.monthValue), expenses.values.fold(0L, Math::addExact), LocalDate.now(clock), expenses,
+            )
+        } catch (exception: ArithmeticException) {
+            throw GlobalException(ErrorCode.INVALID_REQUEST, exception)
+        }
     }
 
     private fun validatedMonth(year: Int, month: Int): YearMonth {

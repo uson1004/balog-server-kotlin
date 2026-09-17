@@ -75,6 +75,34 @@ class MonthlyBudgetControllerTest {
     }
 
     @Test
+    fun getRejectsExpenseTotalThatExceedsLongRange() {
+        `when`(user.currentUserId).thenReturn(userId)
+        `when`(reports.findTransactionHistories(userId, Transaction.TransactionType.EXPENSE, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30)))
+            .thenReturn(listOf(
+                TransactionHistoryRow.builder().transactionDate(LocalDate.of(2026, 9, 1)).amount(Long.MAX_VALUE).build(),
+                TransactionHistoryRow.builder().transactionDate(LocalDate.of(2026, 9, 1)).amount(1).build(),
+            ))
+
+        mvc.perform(get("/budgets/monthly?year=2026&month=9"))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
+    }
+
+    @Test
+    fun getRejectsMonthlyExpenseTotalThatExceedsLongRange() {
+        `when`(user.currentUserId).thenReturn(userId)
+        `when`(reports.findTransactionHistories(userId, Transaction.TransactionType.EXPENSE, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30)))
+            .thenReturn(listOf(
+                TransactionHistoryRow.builder().transactionDate(LocalDate.of(2026, 9, 1)).amount(Long.MAX_VALUE).build(),
+                TransactionHistoryRow.builder().transactionDate(LocalDate.of(2026, 9, 2)).amount(1).build(),
+            ))
+
+        mvc.perform(get("/budgets/monthly?year=2026&month=9"))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
+    }
+
+    @Test
     fun putWritesOnlyPrincipalBudgetAndReturnsIt() {
         spending()
         `when`(budgets.findAmount(userId, 2026, 9)).thenReturn(1000000)
